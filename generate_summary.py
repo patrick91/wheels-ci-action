@@ -17,7 +17,6 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Set
 
 
 @dataclass
@@ -134,7 +133,7 @@ def parse_wheel_filename(filename: str) -> WheelInfo | None:
     return WheelInfo(python_tag=python_tag, abi_tag=abi_tag, platform_tag=platform_tag)
 
 
-def scan_wheels(wheels_path: Path) -> tuple[Dict[str, Set[str]], Set[str], Set[str]]:
+def scan_wheels(wheels_path: Path) -> tuple[dict[str, set[str]], set[str], set[str]]:
     """
     Scan all wheel files and build a matrix of platform -> versions.
 
@@ -165,7 +164,7 @@ def scan_wheels(wheels_path: Path) -> tuple[Dict[str, Set[str]], Set[str], Set[s
     return matrix, platforms, versions
 
 
-def sort_platforms(platforms: Set[str]) -> List[str]:
+def sort_platforms(platforms: set[str]) -> list[str]:
     """Sort platforms in a logical order (OS, then architecture)."""
     # Define order for OSes
     os_order = {
@@ -198,7 +197,7 @@ def sort_platforms(platforms: Set[str]) -> List[str]:
     return sorted(platforms, key=platform_sort_key)
 
 
-def sort_versions(versions: Set[str]) -> List[str]:
+def sort_versions(versions: set[str]) -> list[str]:
     """Sort Python versions in logical order."""
 
     def version_sort_key(version: str):
@@ -227,9 +226,7 @@ def sort_versions(versions: Set[str]) -> List[str]:
     return sorted(versions, key=version_sort_key)
 
 
-def generate_table(
-    matrix: Dict[str, Set[str]], platforms: Set[str], versions: Set[str]
-) -> str:
+def generate_table(matrix: dict[str, set[str]], platforms: set[str], versions: set[str]) -> str:
     """Generate the markdown table."""
     lines = []
 
