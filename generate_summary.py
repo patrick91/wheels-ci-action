@@ -186,7 +186,7 @@ def sort_platforms(platforms: set[str]) -> list[str]:
         "Universal2": 7,
     }
 
-    def platform_sort_key(platform: str):
+    def platform_sort_key(platform: str) -> tuple[int, int, str]:
         # Split platform into OS and architecture
         parts = platform.split(" ", 1)
         os_name = parts[0]
@@ -200,7 +200,7 @@ def sort_platforms(platforms: set[str]) -> list[str]:
 def sort_versions(versions: set[str]) -> list[str]:
     """Sort Python versions in logical order."""
 
-    def version_sort_key(version: str):
+    def version_sort_key(version: str) -> tuple[int, int, int, int]:
         # Handle PyPy versions
         if version.startswith("PyPy"):
             match = re.match(r"PyPy(\d+)\.(\d+)", version)
@@ -258,7 +258,7 @@ def generate_table(matrix: dict[str, set[str]], platforms: set[str], versions: s
     return "\n".join(lines)
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     if len(sys.argv) < 2:
         print("Usage: generate_summary.py <wheels-path>", file=sys.stderr)

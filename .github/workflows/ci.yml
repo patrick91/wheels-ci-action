@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run tests
+        run: pytest -v
+
+  type-check:
+    name: Type Check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run mypy
+        run: |
+          mypy generate_summary.py
+          mypy tests/
+
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run ruff check
+        run: ruff check .
+
+      - name: Run ruff format check
+        run: ruff format --check .
+
+  test-action:
+    name: Test Action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create test wheels
+        run: |
+          mkdir -p test-wheels
+          touch test-wheels/mypackage-1.0.0-cp312-cp312-manylinux_2_17_x86_64.whl
+          touch test-wheels/mypackage-1.0.0-cp313-cp313-manylinux_2_17_x86_64.whl
+          touch test-wheels/mypackage-1.0.0-cp312-cp312-win_amd64.whl
+          touch test-wheels/mypackage-1.0.0-cp314t-cp314t-macosx_11_0_arm64.whl
+          touch test-wheels/mypackage-1.0.0-pp39-pypy39_pp73-linux_x86_64.whl
+
+      - name: Test action
+        uses: ./
+        with:
+          wheels-path: test-wheels
+
+      - name: Verify summary was created
+        run: |
+          if [ ! -f "$GITHUB_STEP_SUMMARY" ]; then
+            echo "ERROR: GITHUB_STEP_SUMMARY file not created"
+            exit 1
+          fi
+          echo "Summary content:"
+          cat "$GITHUB_STEP_SUMMARY"

@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from inline_snapshot import external, snapshot
+from inline_snapshot import external, register_format_alias
 
 from generate_summary import (
     WheelInfo,
@@ -13,6 +13,9 @@ from generate_summary import (
     sort_platforms,
     sort_versions,
 )
+
+# Register .md format as an alias to .txt for markdown files
+register_format_alias(".md", ".txt")
 
 
 class TestWheelInfo:
@@ -179,7 +182,7 @@ class TestGenerateTable:
 
         result = generate_table(matrix, platforms, versions)
 
-        assert result == snapshot(external("simple_table.md"))
+        assert result == external("uuid:b9b6d8f7-2145-4f52-aad8-b5ec38a5bbbf.md")
 
     def test_generate_complex_table(self) -> None:
         """Test generating a complex table with many platforms and versions."""
@@ -208,7 +211,7 @@ class TestGenerateTable:
 
         result = generate_table(matrix, platforms, versions)
 
-        assert result == snapshot(external("complex_table.md"))
+        assert result == external("uuid:2862b59e-e298-4351-9094-91218ff7c1f8.md")
 
     def test_generate_empty_table(self) -> None:
         """Test generating a table with no builds."""
@@ -218,11 +221,4 @@ class TestGenerateTable:
 
         result = generate_table(matrix, platforms, versions)
 
-        assert result == snapshot(external("empty_table.md"))
-
-
-def external(filename: str) -> str:
-    """Helper to use external snapshot files."""
-    from inline_snapshot import external as _external
-
-    return _external(filename)
+        assert result == external("uuid:233401cd-22d1-4cae-9bb3-49b8edebcec8.md")
