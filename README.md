@@ -6,9 +6,8 @@ A GitHub Action that automatically generates a beautiful summary table of Python
 
 - **Completely generic** - Works with any Python project that builds wheels
 - **Zero configuration** - Automatically detects platforms and Python versions from wheel filenames
-- **PEP 427 compliant** - Parses standard wheel naming convention
-- **Smart sorting** - Platforms and Python versions are sorted logically
-- **Free-threaded support** - Detects Python 3.14t and other free-threaded builds
+- **PEP 491 compliant** - Parses standard wheel naming convention
+- **Free-threaded support** - Detects Python 3.14t free-threaded builds
 - **PyPy support** - Recognizes PyPy wheels
 - **All platforms** - Linux (manylinux, musllinux), Windows (x64, x86, ARM64), macOS (x86_64, ARM64, Universal2)
 
@@ -119,7 +118,7 @@ jobs:
 The action:
 
 1. Recursively scans the specified directory for `.whl` files
-2. Parses each wheel filename according to [PEP 427](https://peps.python.org/pep-0427/)
+2. Parses each wheel filename according to [PEP 491](https://peps.python.org/pep-0491/)
 3. Extracts platform and Python version information
 4. Generates a markdown table showing the build matrix
 5. Writes the table to `$GITHUB_STEP_SUMMARY`
@@ -150,7 +149,7 @@ The action automatically detects and categorizes:
 ### Supported Python Versions
 
 - **CPython**: 3.7, 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
-- **Free-threaded**: 3.13t, 3.14t
+- **Free-threaded**: 3.14t
 - **PyPy**: PyPy3.7, PyPy3.8, PyPy3.9, PyPy3.10, PyPy3.11
 
 ## Why This Action?
