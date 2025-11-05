@@ -4,6 +4,13 @@ version = "1.0.0"
 description = "GitHub Action for generating Python wheel build summaries"
 requires-python = ">=3.10"
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "inline-snapshot>=0.13.0",
+    "mypy>=1.8.0",
+]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 100
@@ -26,3 +33,17 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["generate_summary"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+check_untyped_defs = true
+no_implicit_optional = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
