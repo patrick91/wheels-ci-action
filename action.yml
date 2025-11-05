@@ -1,0 +1,25 @@
+name: 'Wheels CI Action'
+description: 'Generate a summary table of built Python wheels across all platforms and Python versions. Works with any Python project by parsing wheel filenames.'
+author: 'patrick91'
+
+inputs:
+  wheels-path:
+    description: 'Path to the directory containing wheel files (.whl). Can be nested in subdirectories.'
+    required: false
+    default: 'wheels'
+
+branding:
+  icon: 'package'
+  color: 'blue'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.x'
+
+    - name: Generate summary
+      shell: bash
+      run: python ${{ github.action_path }}/generate_summary.py "${{ inputs.wheels-path }}"
