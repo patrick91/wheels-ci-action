@@ -29,6 +29,11 @@ class TestWheelInfo:
         wheel = WheelInfo(python_tag="cp314t", abi_tag="cp314t", platform_tag="linux_x86_64")
         assert wheel.python_version == "3.14t"
 
+    def test_python_version_freethreaded_abi_only(self) -> None:
+        """Test freethreaded wheels where 't' is only in abi_tag (e.g., cp314-cp314t)."""
+        wheel = WheelInfo(python_tag="cp314", abi_tag="cp314t", platform_tag="linux_x86_64")
+        assert wheel.python_version == "3.14t"
+
     def test_python_version_pypy(self) -> None:
         wheel = WheelInfo(python_tag="pp39", abi_tag="pypy39_pp73", platform_tag="linux_x86_64")
         assert wheel.python_version == "PyPy3.9"

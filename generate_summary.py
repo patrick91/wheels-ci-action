@@ -30,8 +30,14 @@ class WheelInfo:
     @property
     def python_version(self) -> str:
         """Extract human-readable Python version from python tag."""
-        # Free-threaded Python (e.g., cp314t)
+        # Free-threaded Python (e.g., cp314t in python_tag or abi_tag)
+        # Check python_tag first
         if match := re.match(r"cp(\d)(\d+)t", self.python_tag):
+            major, minor = match.groups()
+            return f"{major}.{minor}t"
+        
+        # Check abi_tag for free-threaded (e.g., cp314-cp314t)
+        if match := re.match(r"cp(\d)(\d+)t", self.abi_tag):
             major, minor = match.groups()
             return f"{major}.{minor}t"
 
