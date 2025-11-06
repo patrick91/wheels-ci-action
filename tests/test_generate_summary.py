@@ -8,10 +8,12 @@ from inline_snapshot import external, register_format_alias
 from generate_summary import (
     WheelInfo,
     generate_table,
+    parse_version_requirement,
     parse_wheel_filename,
     scan_wheels,
     sort_platforms,
     sort_versions,
+    validate_requirements,
 )
 
 # Register .md format as an alias to .txt for markdown files
@@ -227,3 +229,107 @@ class TestGenerateTable:
         result = generate_table(matrix, platforms, versions)
 
         assert result == external("uuid:233401cd-22d1-4cae-9bb3-49b8edebcec8.md")
+
+
+class TestParseVersionRequirement:
+    """Test parse_version_requirement function."""
+
+    def test_single_version(self) -> None:
+        available = {"3.12", "3.13", "3.14"}
+        result = parse_version_requirement("3.12", available)
+        assert result == ["3.12"]
+
+    def test_version_range(self) -> None:
+        available = {"3.12", "3.13", "3.14"}
+        result = parse_version_requirement("3.10-3.13", available)
+        assert result == ["3.10", "3.11", "3.12", "3.13"]
+
+    def test_open_ended_range(self) -> None:
+        available = {"3.12", "3.13", "3.14"}
+        result = parse_version_requirement("3.12+", available)
+        # Should generate up to max available + 1
+        assert result == ["3.12", "3.13", "3.14", "3.15"]
+
+
+class TestValidateRequirements:
+    """Test validate_requirements function."""
+
+    def test_all_requirements_met(self) -> None:
+        matrix = {"Linux x86_64": {"3.12", "3.13", "3.14t"}}
+        platforms = {"Linux x86_64"}
+        versions = {"3.12", "3.13", "3.14", "3.14t"}
+
+        success, errors = validate_requirements(
+            matrix, platforms, versions,
+            require_platforms="Linux x86_64",
+            require_python_versions="3.12,3.13",
+            require_freethreaded="3.14",
+        )
+
+        assert success is True
+        assert errors == []
+
+    def test_missing_platform(self) -> None:
+        matrix = {"Linux x86_64": {"3.12"}}
+        platforms = {"Linux x86_64"}
+        versions = {"3.12"}
+
+        success, errors = validate_requirements(
+            matrix, platforms, versions,
+            require_platforms="Linux x86_64,Windows x64",
+            require_python_versions="",
+            require_freethreaded="none",
+        )
+
+        assert success is False
+        assert len(errors) == 1
+        assert "Windows x64" in errors[0]
+
+    def test_missing_python_version(self) -> None:
+        matrix = {"Linux x86_64": {"3.12", "3.13"}}
+        platforms = {"Linux x86_64"}
+        versions = {"3.12", "3.13"}
+
+        success, errors = validate_requirements(
+            matrix, platforms, versions,
+            require_platforms="",
+            require_python_versions="3.12,3.13,3.14",
+            require_freethreaded="none",
+        )
+
+        assert success is False
+        assert len(errors) == 1
+        assert "3.14" in errors[0]
+
+    def test_missing_freethreaded(self) -> None:
+        matrix = {"Linux x86_64": {"3.14"}}
+        platforms = {"Linux x86_64"}
+        versions = {"3.14"}
+
+        success, errors = validate_requirements(
+            matrix, platforms, versions,
+            require_platforms="",
+            require_python_versions="",
+            require_freethreaded="3.14",
+        )
+
+        assert success is False
+        assert len(errors) == 1
+        assert "3.14t" in errors[0]
+
+    def test_freethreaded_all(self) -> None:
+        matrix = {"Linux x86_64": {"3.12", "3.13", "3.14t"}}
+        platforms = {"Linux x86_64"}
+        versions = {"3.12", "3.13", "3.14", "3.14t"}
+
+        success, errors = validate_requirements(
+            matrix, platforms, versions,
+            require_platforms="",
+            require_python_versions="",
+            require_freethreaded="all",
+        )
+
+        assert success is False
+        assert len(errors) == 2  # Missing 3.12t, 3.13t (3.14 has 3.14t)
+        assert "3.12t" in errors[0] or "3.12t" in errors[1]
+        assert "3.13t" in errors[0] or "3.13t" in errors[1]

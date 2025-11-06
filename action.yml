@@ -7,6 +7,26 @@ inputs:
     description: 'Path to the directory containing wheel files (.whl). Can be nested in subdirectories.'
     required: false
     default: 'wheels'
+  
+  require-platforms:
+    description: 'Comma-separated list of required platforms (e.g., "Linux x86_64,Windows x64,macOS ARM64"). If any are missing, the action will fail.'
+    required: false
+    default: ''
+  
+  require-python-versions:
+    description: 'Comma-separated list of required Python versions (e.g., "3.10,3.11,3.12,3.13,3.14"). Supports version ranges like "3.10+" or "3.10-3.13". If any are missing, the action will fail.'
+    required: false
+    default: ''
+  
+  require-freethreaded:
+    description: 'Require free-threaded Python builds. Options: "none" (default), "3.14" (require 3.14t), "3.14+" (require 3.14t and future versions), "all" (require all specified Python versions have free-threaded builds).'
+    required: false
+    default: 'none'
+  
+  fail-on-missing:
+    description: 'Whether to fail the action if required wheels are missing. Set to "false" to only warn.'
+    required: false
+    default: 'true'
 
 branding:
   icon: 'package'
@@ -22,4 +42,4 @@ runs:
 
     - name: Generate summary
       shell: bash
-      run: python ${{ github.action_path }}/generate_summary.py "${{ inputs.wheels-path }}"
+      run: python ${{ github.action_path }}/generate_summary.py "${{ inputs.wheels-path }}" --require-platforms "${{ inputs.require-platforms }}" --require-python-versions "${{ inputs.require-python-versions }}" --require-freethreaded "${{ inputs.require-freethreaded }}" --fail-on-missing "${{ inputs.fail-on-missing }}"

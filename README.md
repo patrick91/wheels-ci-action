@@ -43,6 +43,22 @@ The action generates a summary table like this:
     wheels-path: wheels
 ```
 
+### With Validation
+
+You can ensure specific wheels are built by adding validation:
+
+```yaml
+- name: Generate build summary
+  uses: patrick91/wheels-ci-action@v1
+  with:
+    wheels-path: all-wheels
+    require-platforms: "Linux x86_64,Windows x64,macOS ARM64"
+    require-python-versions: "3.10-3.14"
+    require-freethreaded: "3.14"
+```
+
+This will fail the workflow if any required wheels are missing, with a detailed error message showing what's missing.
+
 ### Complete Example
 
 Here's a complete workflow example for a Python package using `maturin`:
@@ -112,6 +128,64 @@ jobs:
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `wheels-path` | Path to the directory containing wheel files (.whl). Can be nested in subdirectories. | No | `wheels` |
+| `require-platforms` | Comma-separated list of required platforms (e.g., `"Linux x86_64,Windows x64"`). If any are missing, the action will fail. | No | `""` (no validation) |
+| `require-python-versions` | Comma-separated list of required Python versions. Supports ranges like `"3.10-3.13"` or `"3.12+"`. If any are missing, the action will fail. | No | `""` (no validation) |
+| `require-freethreaded` | Require free-threaded Python builds. Options: `"none"` (default), `"3.14"` (require 3.14t), `"3.14+"` (require 3.14t and future versions), `"all"` (all Python versions must have free-threaded builds). | No | `"none"` |
+| `fail-on-missing` | Whether to fail the action if required wheels are missing. Set to `"false"` to only warn. | No | `"true"` |
+
+## Validation
+
+The action can validate that required wheels are present and fail the build if any are missing. This is useful for catching build matrix issues early.
+
+### Platform Validation
+
+Specify exact platform names that must be present:
+
+```yaml
+require-platforms: "Linux x86_64,Windows x64,macOS ARM64"
+```
+
+### Python Version Validation
+
+Supports several formats:
+
+- **Individual versions**: `"3.12,3.13,3.14"`
+- **Ranges**: `"3.10-3.14"` (includes 3.10, 3.11, 3.12, 3.13, 3.14)
+- **Open-ended**: `"3.12+"` (requires 3.12 and all newer versions currently available)
+
+Examples:
+```yaml
+require-python-versions: "3.10,3.11,3.12,3.13,3.14"
+require-python-versions: "3.10-3.14"
+require-python-versions: "3.12+"
+```
+
+### Free-threaded Validation
+
+Options for validating free-threaded Python builds:
+
+- `"none"`: No free-threaded validation (default)
+- `"3.14"`: Require Python 3.14t
+- `"3.14+"`: Require 3.14t and all future free-threaded versions
+- `"all"`: Every Python version must have a corresponding free-threaded build
+
+```yaml
+require-freethreaded: "3.14"  # Only require 3.14t
+require-freethreaded: "all"   # Require 3.10t, 3.11t, 3.12t, etc.
+```
+
+### Warning Mode
+
+Set `fail-on-missing: "false"` to only show warnings without failing:
+
+```yaml
+- name: Generate build summary
+  uses: patrick91/wheels-ci-action@v1
+  with:
+    wheels-path: all-wheels
+    require-python-versions: "3.10-3.14"
+    fail-on-missing: "false"  # Only warn, don't fail
+```
 
 ## How It Works
 
@@ -120,8 +194,10 @@ The action:
 1. Recursively scans the specified directory for `.whl` files
 2. Parses each wheel filename according to [PEP 491](https://peps.python.org/pep-0491/)
 3. Extracts platform and Python version information
-4. Generates a markdown table showing the build matrix
-5. Writes the table to `$GITHUB_STEP_SUMMARY`
+4. Validates against requirements (if specified)
+5. Generates a markdown table showing the build matrix
+6. Writes the table to `$GITHUB_STEP_SUMMARY`
+7. Fails the build if validation errors are found (unless `fail-on-missing: "false"`)
 
 ### Wheel Filename Parsing
 

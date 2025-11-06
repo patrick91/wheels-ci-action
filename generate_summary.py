@@ -11,6 +11,7 @@ Wheel naming convention (PEP 491):
 Example: rignore-0.2.0-cp312-cp312-macosx_11_0_arm64.whl
 """
 
+import argparse
 import os
 import re
 import sys
@@ -264,13 +265,118 @@ def generate_table(matrix: dict[str, set[str]], platforms: set[str], versions: s
     return "\n".join(lines)
 
 
+def parse_version_requirement(requirement: str, available_versions: set[str]) -> list[str]:
+    """
+    Parse version requirement string into list of versions.
+    
+    Supports:
+    - Single versions: "3.12" -> ["3.12"]
+    - Ranges: "3.10-3.13" -> ["3.10", "3.11", "3.12", "3.13"]
+    - Open-ended: "3.10+" -> ["3.10", "3.11", ...] (limited by available versions + 1)
+    """
+    requirement = requirement.strip()
+    
+    # Handle open-ended ranges (e.g., "3.10+")
+    if requirement.endswith("+"):
+        start = requirement[:-1].strip()
+        if match := re.match(r"(\d+)\.(\d+)", start):
+            major, minor_start = map(int, match.groups())
+            
+            # Find the highest available version to determine upper bound
+            max_minor = minor_start
+            for ver in available_versions:
+                if ver_match := re.match(r"(\d+)\.(\d+)", ver):
+                    ver_major, ver_minor = map(int, ver_match.groups())
+                    if ver_major == major and ver_minor > max_minor:
+                        max_minor = ver_minor
+            
+            # Generate versions from start to max available + 1 (to allow checking for next version)
+            return [f"{major}.{minor}" for minor in range(int(minor_start), max_minor + 2)]
+    
+    # Handle ranges (e.g., "3.10-3.13")
+    if "-" in requirement:
+        start, end = requirement.split("-", 1)
+        start_match = re.match(r"(\d+)\.(\d+)", start.strip())
+        end_match = re.match(r"(\d+)\.(\d+)", end.strip())
+        if start_match and end_match:
+            major, minor_start = map(int, start_match.groups())
+            _, minor_end = map(int, end_match.groups())
+            return [f"{major}.{minor}" for minor in range(int(minor_start), int(minor_end) + 1)]
+    
+    # Single version
+    return [requirement]
+
+
+def validate_requirements(
+    matrix: dict[str, set[str]],
+    platforms: set[str],
+    versions: set[str],
+    require_platforms: str,
+    require_python_versions: str,
+    require_freethreaded: str,
+) -> tuple[bool, list[str]]:
+    """
+    Validate that required wheels are present.
+    
+    Returns:
+        Tuple of (all_requirements_met, list_of_errors)
+    """
+    errors = []
+    
+    # Validate required platforms
+    if require_platforms:
+        required_platforms = [p.strip() for p in require_platforms.split(",") if p.strip()]
+        missing_platforms = [p for p in required_platforms if p not in platforms]
+        if missing_platforms:
+            errors.append(f"Missing required platforms: {', '.join(missing_platforms)}")
+    
+    # Validate required Python versions
+    if require_python_versions:
+        required_versions_raw = [v.strip() for v in require_python_versions.split(",") if v.strip()]
+        required_versions = []
+        for req in required_versions_raw:
+            required_versions.extend(parse_version_requirement(req, versions))
+        
+        # Only check versions that could exist (filter by what's reasonable)
+        missing_versions = [v for v in required_versions if v not in versions and not v.endswith("t")]
+        if missing_versions:
+            errors.append(f"Missing required Python versions: {', '.join(missing_versions)}")
+    
+    # Validate free-threaded requirements
+    if require_freethreaded and require_freethreaded != "none":
+        freethreaded_versions = [v for v in versions if v.endswith("t")]
+        
+        if require_freethreaded == "3.14":
+            if "3.14t" not in versions:
+                errors.append("Missing required free-threaded Python 3.14t")
+        
+        elif require_freethreaded == "3.14+":
+            # Check for 3.14t and any future versions
+            if "3.14t" not in versions:
+                errors.append("Missing required free-threaded Python 3.14t")
+        
+        elif require_freethreaded == "all":
+            # Check that all regular versions also have free-threaded builds
+            regular_versions = [v for v in versions if not v.endswith("t") and not v.startswith("PyPy")]
+            for version in regular_versions:
+                ft_version = f"{version}t"
+                if ft_version not in versions:
+                    errors.append(f"Missing free-threaded build for Python {version} (expected {ft_version})")
+    
+    return len(errors) == 0, errors
+
+
 def main() -> None:
     """Main entry point."""
-    if len(sys.argv) < 2:
-        print("Usage: generate_summary.py <wheels-path>", file=sys.stderr)
-        sys.exit(1)
-
-    wheels_path = Path(sys.argv[1])
+    parser = argparse.ArgumentParser(description="Generate wheel build summary")
+    parser.add_argument("wheels_path", help="Path to directory containing wheel files")
+    parser.add_argument("--require-platforms", default="", help="Comma-separated list of required platforms")
+    parser.add_argument("--require-python-versions", default="", help="Comma-separated list of required Python versions")
+    parser.add_argument("--require-freethreaded", default="none", help="Free-threaded build requirements")
+    parser.add_argument("--fail-on-missing", default="true", help="Whether to fail on missing wheels")
+    
+    args = parser.parse_args()
+    wheels_path = Path(args.wheels_path)
 
     if not wheels_path.exists():
         print(f"Error: Path '{wheels_path}' does not exist", file=sys.stderr)
@@ -283,8 +389,24 @@ def main() -> None:
         print("No wheel files found", file=sys.stderr)
         sys.exit(1)
 
+    # Validate requirements
+    requirements_met, errors = validate_requirements(
+        matrix,
+        platforms,
+        versions,
+        args.require_platforms,
+        args.require_python_versions,
+        args.require_freethreaded,
+    )
+
     # Generate markdown table
     table = generate_table(matrix, platforms, versions)
+
+    # Add validation results to table if there are errors
+    if errors:
+        table += "\n\n## ⚠️ Missing Required Wheels\n\n"
+        for error in errors:
+            table += f"- ❌ {error}\n"
 
     # Write to GitHub step summary
     if github_step_summary := os.environ.get("GITHUB_STEP_SUMMARY"):
@@ -293,6 +415,17 @@ def main() -> None:
     else:
         # For local testing
         print(table)
+
+    # Exit with error if requirements not met and fail-on-missing is true
+    if not requirements_met and args.fail_on_missing.lower() == "true":
+        print("❌ Required wheels are missing!", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        sys.exit(1)
+    elif not requirements_met:
+        print("⚠️ Warning: Required wheels are missing, but continuing...", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
 
 
 if __name__ == "__main__":
