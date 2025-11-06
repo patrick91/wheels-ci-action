@@ -12,6 +12,8 @@ Example: rignore-0.2.0-cp312-cp312-macosx_11_0_arm64.whl
 """
 
 import argparse
+import fnmatch
+import json
 import os
 import re
 import sys
@@ -351,15 +353,61 @@ def validate_requirements(
     require_platforms: str,
     require_python_versions: str,
     require_freethreaded: str,
+    require_matrix: str,
 ) -> tuple[bool, list[str]]:
     """
     Validate that required wheels are present.
+    
+    Supports both simple global requirements and per-platform matrix requirements.
+    If require_matrix is specified, it takes precedence over global requirements.
     
     Returns:
         Tuple of (all_requirements_met, list_of_errors)
     """
     errors = []
     
+    # If matrix requirements are specified, use those exclusively
+    if require_matrix:
+        try:
+            # Try to parse as JSON first
+            matrix_requirements = json.loads(require_matrix)
+        except json.JSONDecodeError:
+            errors.append(f"Invalid JSON in require-matrix: {require_matrix}")
+            return False, errors
+        
+        # Validate each platform requirement in the matrix
+        for req in matrix_requirements:
+            platform_pattern = req.get("platform", "")
+            required_versions_str = req.get("versions", "")
+            
+            if not platform_pattern:
+                continue
+            
+            # Find matching platforms (supports wildcards)
+            matching_platforms = [p for p in platforms if fnmatch.fnmatch(p, platform_pattern)]
+            
+            if not matching_platforms:
+                errors.append(f"No platforms found matching pattern: {platform_pattern}")
+                continue
+            
+            # Parse required versions for this platform
+            required_versions_raw = [v.strip() for v in required_versions_str.split(",") if v.strip()]
+            required_versions = []
+            for version_req in required_versions_raw:
+                required_versions.extend(parse_version_requirement(version_req, versions))
+            
+            # Check each matching platform for the required versions
+            for platform in matching_platforms:
+                platform_versions = matrix.get(platform, set())
+                missing = [v for v in required_versions if v not in platform_versions]
+                if missing:
+                    errors.append(
+                        f"Platform '{platform}' missing required versions: {', '.join(missing)}"
+                    )
+        
+        return len(errors) == 0, errors
+    
+    # Fall back to simple global validation if no matrix specified
     # Validate required platforms
     if require_platforms:
         required_platforms = [p.strip() for p in require_platforms.split(",") if p.strip()]
@@ -367,7 +415,7 @@ def validate_requirements(
         if missing_platforms:
             errors.append(f"Missing required platforms: {', '.join(missing_platforms)}")
     
-    # Validate required Python versions
+    # Validate required Python versions (globally across all platforms)
     if require_python_versions:
         required_versions_raw = [v.strip() for v in require_python_versions.split(",") if v.strip()]
         required_versions = []
@@ -379,7 +427,7 @@ def validate_requirements(
         if missing_versions:
             errors.append(f"Missing required Python versions: {', '.join(missing_versions)}")
     
-    # Validate free-threaded requirements
+    # Validate free-threaded requirements (globally)
     if require_freethreaded and require_freethreaded != "none":
         freethreaded_versions = [v for v in versions if v.endswith("t")]
         
@@ -410,6 +458,7 @@ def main() -> None:
     parser.add_argument("--require-platforms", default="", help="Comma-separated list of required platforms")
     parser.add_argument("--require-python-versions", default="", help="Comma-separated list of required Python versions")
     parser.add_argument("--require-freethreaded", default="none", help="Free-threaded build requirements")
+    parser.add_argument("--require-matrix", default="", help="JSON string defining per-platform version requirements")
     parser.add_argument("--fail-on-missing", default="true", help="Whether to fail on missing wheels")
     
     args = parser.parse_args()
@@ -434,6 +483,7 @@ def main() -> None:
         args.require_platforms,
         args.require_python_versions,
         args.require_freethreaded,
+        args.require_matrix,
     )
 
     # Generate markdown table

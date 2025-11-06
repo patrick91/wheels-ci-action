@@ -280,6 +280,7 @@ class TestValidateRequirements:
             require_platforms="Linux x86_64",
             require_python_versions="3.12,3.13",
             require_freethreaded="3.14",
+            require_matrix="",
         )
 
         assert success is True
@@ -295,6 +296,7 @@ class TestValidateRequirements:
             require_platforms="Linux x86_64,Windows x64",
             require_python_versions="",
             require_freethreaded="none",
+            require_matrix="",
         )
 
         assert success is False
@@ -311,6 +313,7 @@ class TestValidateRequirements:
             require_platforms="",
             require_python_versions="3.12,3.13,3.14",
             require_freethreaded="none",
+            require_matrix="",
         )
 
         assert success is False
@@ -327,6 +330,7 @@ class TestValidateRequirements:
             require_platforms="",
             require_python_versions="",
             require_freethreaded="3.14",
+            require_matrix="",
         )
 
         assert success is False
@@ -343,9 +347,76 @@ class TestValidateRequirements:
             require_platforms="",
             require_python_versions="",
             require_freethreaded="all",
+            require_matrix="",
         )
 
         assert success is False
         assert len(errors) == 2  # Missing 3.12t, 3.13t (3.14 has 3.14t)
         assert "3.12t" in errors[0] or "3.12t" in errors[1]
         assert "3.13t" in errors[0] or "3.13t" in errors[1]
+
+    def test_matrix_validation_exact_match(self) -> None:
+        matrix = {
+            "Linux x86_64": {"3.12", "3.13", "3.14t", "PyPy3.9"},
+            "Windows x64": {"3.12"},
+        }
+        platforms = {"Linux x86_64", "Windows x64"}
+        versions = {"3.12", "3.13", "3.14t", "PyPy3.9"}
+
+        require_matrix_json = '[{"platform": "Linux x86_64", "versions": "3.12,3.13,3.14t"}, {"platform": "Windows x64", "versions": "3.12"}]'
+
+        success, errors = validate_requirements(
+            matrix, platforms, versions,
+            require_platforms="",
+            require_python_versions="",
+            require_freethreaded="none",
+            require_matrix=require_matrix_json,
+        )
+
+        assert success is True
+        assert errors == []
+
+    def test_matrix_validation_with_wildcard(self) -> None:
+        matrix = {
+            "Linux x86_64": {"3.12", "3.13"},
+            "Linux aarch64": {"3.12", "3.13"},
+            "Windows x64": {"3.12"},
+        }
+        platforms = {"Linux x86_64", "Linux aarch64", "Windows x64"}
+        versions = {"3.12", "3.13"}
+
+        require_matrix_json = '[{"platform": "Linux*", "versions": "3.12,3.13"}, {"platform": "Windows*", "versions": "3.12"}]'
+
+        success, errors = validate_requirements(
+            matrix, platforms, versions,
+            require_platforms="",
+            require_python_versions="",
+            require_freethreaded="none",
+            require_matrix=require_matrix_json,
+        )
+
+        assert success is True
+        assert errors == []
+
+    def test_matrix_validation_missing_version(self) -> None:
+        matrix = {
+            "Linux x86_64": {"3.12"},
+            "Windows x64": {"3.12"},
+        }
+        platforms = {"Linux x86_64", "Windows x64"}
+        versions = {"3.12"}
+
+        require_matrix_json = '[{"platform": "Linux x86_64", "versions": "3.12,3.13"}, {"platform": "Windows x64", "versions": "3.12"}]'
+
+        success, errors = validate_requirements(
+            matrix, platforms, versions,
+            require_platforms="",
+            require_python_versions="",
+            require_freethreaded="none",
+            require_matrix=require_matrix_json,
+        )
+
+        assert success is False
+        assert len(errors) == 1
+        assert "Linux x86_64" in errors[0]
+        assert "3.13" in errors[0]

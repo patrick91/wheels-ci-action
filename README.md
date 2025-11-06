@@ -128,14 +128,20 @@ jobs:
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `wheels-path` | Path to the directory containing wheel files (.whl). Can be nested in subdirectories. | No | `wheels` |
-| `require-platforms` | Comma-separated list of required platforms (e.g., `"Linux x86_64,Windows x64"`). If any are missing, the action will fail. | No | `""` (no validation) |
-| `require-python-versions` | Comma-separated list of required Python versions. Supports ranges like `"3.10-3.13"` or `"3.12+"`. If any are missing, the action will fail. | No | `""` (no validation) |
-| `require-freethreaded` | Require free-threaded Python builds. Options: `"none"` (default), `"3.14"` (require 3.14t), `"3.14+"` (require 3.14t and future versions), `"all"` (all Python versions must have free-threaded builds). | No | `"none"` |
+| `require-platforms` | Comma-separated list of required platforms (e.g., `"Linux x86_64,Windows x64"`). If any are missing, the action will fail. Only used in simple mode. | No | `""` (no validation) |
+| `require-python-versions` | Comma-separated list of required Python versions. Supports ranges like `"3.10-3.13"` or `"3.12+"`. Applied globally to all platforms in simple mode. | No | `""` (no validation) |
+| `require-freethreaded` | Require free-threaded Python builds. Options: `"none"` (default), `"3.14"`, `"3.14+"`, `"all"`. Applied globally in simple mode. | No | `"none"` |
+| `require-matrix` | JSON array defining per-platform version requirements. Each entry has `"platform"` (supports wildcards) and `"versions"` fields. When specified, takes precedence over simple mode settings. | No | `""` (use simple mode) |
 | `fail-on-missing` | Whether to fail the action if required wheels are missing. Set to `"false"` to only warn. | No | `"true"` |
 
 ## Validation
 
 The action can validate that required wheels are present and fail the build if any are missing. This is useful for catching build matrix issues early.
+
+### Two Validation Modes
+
+1. **Simple Mode**: Apply the same requirements globally across all platforms
+2. **Matrix Mode**: Specify different requirements for different platforms (with wildcard support)
 
 ### Platform Validation
 
@@ -187,6 +193,51 @@ Options for validating free-threaded Python builds:
 require-freethreaded: "3.14"  # Only require 3.14t
 require-freethreaded: "all"   # Require 3.10t, 3.11t, 3.12t, etc.
 ```
+
+### Matrix Mode (Per-Platform Requirements)
+
+For more granular control, use `require-matrix` to specify different requirements for each platform. This is perfect when different platforms support different Python versions:
+
+```yaml
+- name: Generate build summary
+  uses: patrick91/wheels-ci-action@v1
+  with:
+    wheels-path: all-wheels
+    require-matrix: |
+      [
+        {
+          "platform": "Linux*",
+          "versions": "3.8-3.14,3.14t,PyPy3.9-3.11"
+        },
+        {
+          "platform": "musllinux*",
+          "versions": "3.8-3.14,3.14t,PyPy3.9-3.11"
+        },
+        {
+          "platform": "macOS*",
+          "versions": "3.8-3.14,3.14t,PyPy3.9-3.11"
+        },
+        {
+          "platform": "Windows x64",
+          "versions": "3.8-3.14,3.14t"
+        },
+        {
+          "platform": "Windows x86",
+          "versions": "3.8-3.14,3.14t"
+        },
+        {
+          "platform": "Windows ARM64",
+          "versions": "3.11-3.14,3.14t"
+        }
+      ]
+```
+
+**Features:**
+- **Wildcards**: `"Linux*"` matches `"Linux x86_64"`, `"Linux aarch64"`, etc.
+- **Per-platform versions**: Different platforms can require different Python versions
+- **Full version support**: Ranges (`3.10-3.14`), open-ended (`3.12+`), PyPy (`PyPy3.9-3.11`)
+
+**Note**: When `require-matrix` is specified, it takes precedence over `require-python-versions` and `require-freethreaded`.
 
 ### Warning Mode
 

@@ -14,14 +14,19 @@ inputs:
     default: ''
   
   require-python-versions:
-    description: 'Comma-separated list of required Python versions (e.g., "3.10,3.11,3.12,3.13,3.14"). Supports version ranges like "3.10+" or "3.10-3.13". For PyPy, use "PyPy3.9,PyPy3.10" or ranges like "PyPy3.9-3.11". If any are missing, the action will fail.'
+    description: 'Default required Python versions for all platforms (e.g., "3.10-3.14"). Used as fallback when require-matrix is not specified. Supports ranges like "3.10+" or "3.10-3.13".'
     required: false
     default: ''
   
   require-freethreaded:
-    description: 'Require free-threaded Python builds. Options: "none" (default), "3.14" (require 3.14t), "3.14+" (require 3.14t and future versions), "all" (require all specified Python versions have free-threaded builds).'
+    description: 'Default free-threaded requirement for all platforms. Options: "none" (default), "3.14", "3.14+", "all".'
     required: false
     default: 'none'
+  
+  require-matrix:
+    description: 'JSON or YAML string defining per-platform version requirements. Example: [{"platform": "Linux x86_64", "versions": "3.8-3.14,3.14t,PyPy3.9-3.11"}, {"platform": "Windows*", "versions": "3.8-3.14,3.14t"}]. Supports wildcards in platform names.'
+    required: false
+    default: ''
   
   fail-on-missing:
     description: 'Whether to fail the action if required wheels are missing. Set to "false" to only warn.'
@@ -42,4 +47,4 @@ runs:
 
     - name: Generate summary
       shell: bash
-      run: python ${{ github.action_path }}/generate_summary.py "${{ inputs.wheels-path }}" --require-platforms "${{ inputs.require-platforms }}" --require-python-versions "${{ inputs.require-python-versions }}" --require-freethreaded "${{ inputs.require-freethreaded }}" --fail-on-missing "${{ inputs.fail-on-missing }}"
+      run: python ${{ github.action_path }}/generate_summary.py "${{ inputs.wheels-path }}" --require-platforms "${{ inputs.require-platforms }}" --require-python-versions "${{ inputs.require-python-versions }}" --require-freethreaded "${{ inputs.require-freethreaded }}" --require-matrix "${{ inputs.require-matrix }}" --fail-on-missing "${{ inputs.fail-on-missing }}"
