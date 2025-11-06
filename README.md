@@ -147,18 +147,32 @@ require-platforms: "Linux x86_64,Windows x64,macOS ARM64"
 
 ### Python Version Validation
 
-Supports several formats:
+Supports several formats for both CPython and PyPy:
 
+**CPython:**
 - **Individual versions**: `"3.12,3.13,3.14"`
 - **Ranges**: `"3.10-3.14"` (includes 3.10, 3.11, 3.12, 3.13, 3.14)
 - **Open-ended**: `"3.12+"` (requires 3.12 and all newer versions currently available)
+
+**PyPy:**
+- **Individual versions**: `"PyPy3.9,PyPy3.10,PyPy3.11"`
+- **Ranges**: `"PyPy3.9-3.11"` (includes PyPy3.9, PyPy3.10, PyPy3.11)
+- **Open-ended**: `"PyPy3.9+"` (requires PyPy3.9 and all newer PyPy versions)
+
+**Combined:**
+```yaml
+require-python-versions: "3.10-3.14,PyPy3.9-3.11"
+```
 
 Examples:
 ```yaml
 require-python-versions: "3.10,3.11,3.12,3.13,3.14"
 require-python-versions: "3.10-3.14"
 require-python-versions: "3.12+"
+require-python-versions: "3.12+,PyPy3.10+"
 ```
+
+**Note**: CPython and PyPy are treated as separate interpreters. Specifying `"3.9"` will not match `"PyPy3.9"` - you must explicitly require PyPy versions if needed.
 
 ### Free-threaded Validation
 

@@ -14,7 +14,7 @@ inputs:
     default: ''
   
   require-python-versions:
-    description: 'Comma-separated list of required Python versions (e.g., "3.10,3.11,3.12,3.13,3.14"). Supports version ranges like "3.10+" or "3.10-3.13". If any are missing, the action will fail.'
+    description: 'Comma-separated list of required Python versions (e.g., "3.10,3.11,3.12,3.13,3.14"). Supports version ranges like "3.10+" or "3.10-3.13". For PyPy, use "PyPy3.9,PyPy3.10" or ranges like "PyPy3.9-3.11". If any are missing, the action will fail.'
     required: false
     default: ''
   

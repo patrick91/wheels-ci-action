@@ -250,6 +250,22 @@ class TestParseVersionRequirement:
         # Should generate up to max available + 1
         assert result == ["3.12", "3.13", "3.14", "3.15"]
 
+    def test_pypy_single_version(self) -> None:
+        available = {"PyPy3.9", "PyPy3.10", "PyPy3.11"}
+        result = parse_version_requirement("PyPy3.9", available)
+        assert result == ["PyPy3.9"]
+
+    def test_pypy_range(self) -> None:
+        available = {"PyPy3.9", "PyPy3.10", "PyPy3.11"}
+        result = parse_version_requirement("PyPy3.9-3.11", available)
+        assert result == ["PyPy3.9", "PyPy3.10", "PyPy3.11"]
+
+    def test_pypy_open_ended_range(self) -> None:
+        available = {"PyPy3.9", "PyPy3.10", "PyPy3.11"}
+        result = parse_version_requirement("PyPy3.9+", available)
+        # Should generate up to max available + 1
+        assert result == ["PyPy3.9", "PyPy3.10", "PyPy3.11", "PyPy3.12"]
+
 
 class TestValidateRequirements:
     """Test validate_requirements function."""

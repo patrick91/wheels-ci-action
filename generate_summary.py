@@ -273,10 +273,47 @@ def parse_version_requirement(requirement: str, available_versions: set[str]) ->
     - Single versions: "3.12" -> ["3.12"]
     - Ranges: "3.10-3.13" -> ["3.10", "3.11", "3.12", "3.13"]
     - Open-ended: "3.10+" -> ["3.10", "3.11", ...] (limited by available versions + 1)
+    - PyPy single: "PyPy3.9" -> ["PyPy3.9"]
+    - PyPy ranges: "PyPy3.9-3.11" -> ["PyPy3.9", "PyPy3.10", "PyPy3.11"]
+    - PyPy open-ended: "PyPy3.9+" -> ["PyPy3.9", "PyPy3.10", ...] (limited by available)
     """
     requirement = requirement.strip()
     
-    # Handle open-ended ranges (e.g., "3.10+")
+    # Handle PyPy versions
+    if requirement.startswith("PyPy"):
+        # Handle PyPy open-ended ranges (e.g., "PyPy3.9+")
+        if requirement.endswith("+"):
+            start = requirement[:-1].strip()
+            if match := re.match(r"PyPy(\d+)\.(\d+)", start):
+                major, minor_start = map(int, match.groups())
+                
+                # Find the highest available PyPy version
+                max_minor = minor_start
+                for ver in available_versions:
+                    if ver_match := re.match(r"PyPy(\d+)\.(\d+)", ver):
+                        ver_major, ver_minor = map(int, ver_match.groups())
+                        if ver_major == major and ver_minor > max_minor:
+                            max_minor = ver_minor
+                
+                # Generate PyPy versions from start to max available + 1
+                return [f"PyPy{major}.{minor}" for minor in range(int(minor_start), max_minor + 2)]
+        
+        # Handle PyPy ranges (e.g., "PyPy3.9-3.11")
+        if "-" in requirement:
+            # Format: "PyPy3.9-3.11" (not "PyPy3.9-PyPy3.11")
+            if requirement.count("-") == 1 and requirement.index("-") > 4:
+                start_part, end = requirement.split("-", 1)
+                start_match = re.match(r"PyPy(\d+)\.(\d+)", start_part.strip())
+                end_match = re.match(r"(\d+)\.(\d+)", end.strip())
+                if start_match and end_match:
+                    major, minor_start = map(int, start_match.groups())
+                    _, minor_end = map(int, end_match.groups())
+                    return [f"PyPy{major}.{minor}" for minor in range(int(minor_start), int(minor_end) + 1)]
+        
+        # Single PyPy version
+        return [requirement]
+    
+    # Handle CPython open-ended ranges (e.g., "3.10+")
     if requirement.endswith("+"):
         start = requirement[:-1].strip()
         if match := re.match(r"(\d+)\.(\d+)", start):
@@ -293,7 +330,7 @@ def parse_version_requirement(requirement: str, available_versions: set[str]) ->
             # Generate versions from start to max available + 1 (to allow checking for next version)
             return [f"{major}.{minor}" for minor in range(int(minor_start), max_minor + 2)]
     
-    # Handle ranges (e.g., "3.10-3.13")
+    # Handle CPython ranges (e.g., "3.10-3.13")
     if "-" in requirement:
         start, end = requirement.split("-", 1)
         start_match = re.match(r"(\d+)\.(\d+)", start.strip())
