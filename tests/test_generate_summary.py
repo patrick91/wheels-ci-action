@@ -276,7 +276,9 @@ class TestValidateRequirements:
         versions = {"3.12", "3.13", "3.14", "3.14t"}
 
         success, errors = validate_requirements(
-            matrix, platforms, versions,
+            matrix,
+            platforms,
+            versions,
             require_platforms="Linux x86_64",
             require_python_versions="3.12,3.13",
             require_freethreaded="3.14",
@@ -292,7 +294,9 @@ class TestValidateRequirements:
         versions = {"3.12"}
 
         success, errors = validate_requirements(
-            matrix, platforms, versions,
+            matrix,
+            platforms,
+            versions,
             require_platforms="Linux x86_64,Windows x64",
             require_python_versions="",
             require_freethreaded="none",
@@ -309,7 +313,9 @@ class TestValidateRequirements:
         versions = {"3.12", "3.13"}
 
         success, errors = validate_requirements(
-            matrix, platforms, versions,
+            matrix,
+            platforms,
+            versions,
             require_platforms="",
             require_python_versions="3.12,3.13,3.14",
             require_freethreaded="none",
@@ -326,7 +332,9 @@ class TestValidateRequirements:
         versions = {"3.14"}
 
         success, errors = validate_requirements(
-            matrix, platforms, versions,
+            matrix,
+            platforms,
+            versions,
             require_platforms="",
             require_python_versions="",
             require_freethreaded="3.14",
@@ -343,7 +351,9 @@ class TestValidateRequirements:
         versions = {"3.12", "3.13", "3.14", "3.14t"}
 
         success, errors = validate_requirements(
-            matrix, platforms, versions,
+            matrix,
+            platforms,
+            versions,
             require_platforms="",
             require_python_versions="",
             require_freethreaded="all",
@@ -366,7 +376,9 @@ class TestValidateRequirements:
         require_matrix_json = '[{"platform": "Linux x86_64", "versions": "3.12,3.13,3.14t"}, {"platform": "Windows x64", "versions": "3.12"}]'
 
         success, errors = validate_requirements(
-            matrix, platforms, versions,
+            matrix,
+            platforms,
+            versions,
             require_platforms="",
             require_python_versions="",
             require_freethreaded="none",
@@ -388,7 +400,9 @@ class TestValidateRequirements:
         require_matrix_json = '[{"platform": "Linux*", "versions": "3.12,3.13"}, {"platform": "Windows*", "versions": "3.12"}]'
 
         success, errors = validate_requirements(
-            matrix, platforms, versions,
+            matrix,
+            platforms,
+            versions,
             require_platforms="",
             require_python_versions="",
             require_freethreaded="none",
@@ -409,7 +423,9 @@ class TestValidateRequirements:
         require_matrix_json = '[{"platform": "Linux x86_64", "versions": "3.12,3.13"}, {"platform": "Windows x64", "versions": "3.12"}]'
 
         success, errors = validate_requirements(
-            matrix, platforms, versions,
+            matrix,
+            platforms,
+            versions,
             require_platforms="",
             require_python_versions="",
             require_freethreaded="none",

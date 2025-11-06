@@ -38,7 +38,7 @@ class WheelInfo:
         if match := re.match(r"cp(\d)(\d+)t", self.python_tag):
             major, minor = match.groups()
             return f"{major}.{minor}t"
-        
+
         # Check abi_tag for free-threaded (e.g., cp314-cp314t)
         if match := re.match(r"cp(\d)(\d+)t", self.abi_tag):
             major, minor = match.groups()
@@ -270,7 +270,7 @@ def generate_table(matrix: dict[str, set[str]], platforms: set[str], versions: s
 def parse_version_requirement(requirement: str, available_versions: set[str]) -> list[str]:
     """
     Parse version requirement string into list of versions.
-    
+
     Supports:
     - Single versions: "3.12" -> ["3.12"]
     - Ranges: "3.10-3.13" -> ["3.10", "3.11", "3.12", "3.13"]
@@ -280,7 +280,7 @@ def parse_version_requirement(requirement: str, available_versions: set[str]) ->
     - PyPy open-ended: "PyPy3.9+" -> ["PyPy3.9", "PyPy3.10", ...] (limited by available)
     """
     requirement = requirement.strip()
-    
+
     # Handle PyPy versions
     if requirement.startswith("PyPy"):
         # Handle PyPy open-ended ranges (e.g., "PyPy3.9+")
@@ -288,7 +288,7 @@ def parse_version_requirement(requirement: str, available_versions: set[str]) ->
             start = requirement[:-1].strip()
             if match := re.match(r"PyPy(\d+)\.(\d+)", start):
                 major, minor_start = map(int, match.groups())
-                
+
                 # Find the highest available PyPy version
                 max_minor = minor_start
                 for ver in available_versions:
@@ -296,31 +296,31 @@ def parse_version_requirement(requirement: str, available_versions: set[str]) ->
                         ver_major, ver_minor = map(int, ver_match.groups())
                         if ver_major == major and ver_minor > max_minor:
                             max_minor = ver_minor
-                
+
                 # Generate PyPy versions from start to max available + 1
                 return [f"PyPy{major}.{minor}" for minor in range(int(minor_start), max_minor + 2)]
-        
+
         # Handle PyPy ranges (e.g., "PyPy3.9-3.11")
-        if "-" in requirement:
-            # Format: "PyPy3.9-3.11" (not "PyPy3.9-PyPy3.11")
-            if requirement.count("-") == 1 and requirement.index("-") > 4:
-                start_part, end = requirement.split("-", 1)
-                start_match = re.match(r"PyPy(\d+)\.(\d+)", start_part.strip())
-                end_match = re.match(r"(\d+)\.(\d+)", end.strip())
-                if start_match and end_match:
-                    major, minor_start = map(int, start_match.groups())
-                    _, minor_end = map(int, end_match.groups())
-                    return [f"PyPy{major}.{minor}" for minor in range(int(minor_start), int(minor_end) + 1)]
-        
+        if "-" in requirement and requirement.count("-") == 1 and requirement.index("-") > 4:
+            start_part, end = requirement.split("-", 1)
+            start_match = re.match(r"PyPy(\d+)\.(\d+)", start_part.strip())
+            end_match = re.match(r"(\d+)\.(\d+)", end.strip())
+            if start_match and end_match:
+                major, minor_start = map(int, start_match.groups())
+                _, minor_end = map(int, end_match.groups())
+                return [
+                    f"PyPy{major}.{minor}" for minor in range(int(minor_start), int(minor_end) + 1)
+                ]
+
         # Single PyPy version
         return [requirement]
-    
+
     # Handle CPython open-ended ranges (e.g., "3.10+")
     if requirement.endswith("+"):
         start = requirement[:-1].strip()
         if match := re.match(r"(\d+)\.(\d+)", start):
             major, minor_start = map(int, match.groups())
-            
+
             # Find the highest available version to determine upper bound
             max_minor = minor_start
             for ver in available_versions:
@@ -328,10 +328,10 @@ def parse_version_requirement(requirement: str, available_versions: set[str]) ->
                     ver_major, ver_minor = map(int, ver_match.groups())
                     if ver_major == major and ver_minor > max_minor:
                         max_minor = ver_minor
-            
+
             # Generate versions from start to max available + 1 (to allow checking for next version)
             return [f"{major}.{minor}" for minor in range(int(minor_start), max_minor + 2)]
-    
+
     # Handle CPython ranges (e.g., "3.10-3.13")
     if "-" in requirement:
         start, end = requirement.split("-", 1)
@@ -341,7 +341,7 @@ def parse_version_requirement(requirement: str, available_versions: set[str]) ->
             major, minor_start = map(int, start_match.groups())
             _, minor_end = map(int, end_match.groups())
             return [f"{major}.{minor}" for minor in range(int(minor_start), int(minor_end) + 1)]
-    
+
     # Single version
     return [requirement]
 
@@ -357,15 +357,15 @@ def validate_requirements(
 ) -> tuple[bool, list[str]]:
     """
     Validate that required wheels are present.
-    
+
     Supports both simple global requirements and per-platform matrix requirements.
     If require_matrix is specified, it takes precedence over global requirements.
-    
+
     Returns:
         Tuple of (all_requirements_met, list_of_errors)
     """
     errors = []
-    
+
     # If matrix requirements are specified, use those exclusively
     if require_matrix:
         try:
@@ -374,28 +374,30 @@ def validate_requirements(
         except json.JSONDecodeError:
             errors.append(f"Invalid JSON in require-matrix: {require_matrix}")
             return False, errors
-        
+
         # Validate each platform requirement in the matrix
         for req in matrix_requirements:
             platform_pattern = req.get("platform", "")
             required_versions_str = req.get("versions", "")
-            
+
             if not platform_pattern:
                 continue
-            
+
             # Find matching platforms (supports wildcards)
             matching_platforms = [p for p in platforms if fnmatch.fnmatch(p, platform_pattern)]
-            
+
             if not matching_platforms:
                 errors.append(f"No platforms found matching pattern: {platform_pattern}")
                 continue
-            
+
             # Parse required versions for this platform
-            required_versions_raw = [v.strip() for v in required_versions_str.split(",") if v.strip()]
+            required_versions_raw = [
+                v.strip() for v in required_versions_str.split(",") if v.strip()
+            ]
             required_versions = []
             for version_req in required_versions_raw:
                 required_versions.extend(parse_version_requirement(version_req, versions))
-            
+
             # Check each matching platform for the required versions
             for platform in matching_platforms:
                 platform_versions = matrix.get(platform, set())
@@ -404,9 +406,9 @@ def validate_requirements(
                     errors.append(
                         f"Platform '{platform}' missing required versions: {', '.join(missing)}"
                     )
-        
+
         return len(errors) == 0, errors
-    
+
     # Fall back to simple global validation if no matrix specified
     # Validate required platforms
     if require_platforms:
@@ -414,40 +416,46 @@ def validate_requirements(
         missing_platforms = [p for p in required_platforms if p not in platforms]
         if missing_platforms:
             errors.append(f"Missing required platforms: {', '.join(missing_platforms)}")
-    
+
     # Validate required Python versions (globally across all platforms)
     if require_python_versions:
         required_versions_raw = [v.strip() for v in require_python_versions.split(",") if v.strip()]
         required_versions = []
         for req in required_versions_raw:
             required_versions.extend(parse_version_requirement(req, versions))
-        
+
         # Only check versions that could exist (filter by what's reasonable)
-        missing_versions = [v for v in required_versions if v not in versions and not v.endswith("t")]
+        missing_versions = [
+            v for v in required_versions if v not in versions and not v.endswith("t")
+        ]
         if missing_versions:
             errors.append(f"Missing required Python versions: {', '.join(missing_versions)}")
-    
+
     # Validate free-threaded requirements (globally)
     if require_freethreaded and require_freethreaded != "none":
-        freethreaded_versions = [v for v in versions if v.endswith("t")]
-        
+        [v for v in versions if v.endswith("t")]
+
         if require_freethreaded == "3.14":
             if "3.14t" not in versions:
                 errors.append("Missing required free-threaded Python 3.14t")
-        
+
         elif require_freethreaded == "3.14+":
             # Check for 3.14t and any future versions
             if "3.14t" not in versions:
                 errors.append("Missing required free-threaded Python 3.14t")
-        
+
         elif require_freethreaded == "all":
             # Check that all regular versions also have free-threaded builds
-            regular_versions = [v for v in versions if not v.endswith("t") and not v.startswith("PyPy")]
+            regular_versions = [
+                v for v in versions if not v.endswith("t") and not v.startswith("PyPy")
+            ]
             for version in regular_versions:
                 ft_version = f"{version}t"
                 if ft_version not in versions:
-                    errors.append(f"Missing free-threaded build for Python {version} (expected {ft_version})")
-    
+                    errors.append(
+                        f"Missing free-threaded build for Python {version} (expected {ft_version})"
+                    )
+
     return len(errors) == 0, errors
 
 
@@ -455,12 +463,31 @@ def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(description="Generate wheel build summary")
     parser.add_argument("wheels_path", help="Path to directory containing wheel files")
-    parser.add_argument("--require-platforms", default="", help="Comma-separated list of required platforms")
-    parser.add_argument("--require-python-versions", default="", help="Comma-separated list of required Python versions")
-    parser.add_argument("--require-freethreaded", default="none", help="Free-threaded build requirements")
-    parser.add_argument("--require-matrix", default="", help="JSON string defining per-platform version requirements")
-    parser.add_argument("--fail-on-missing", default="true", help="Whether to fail on missing wheels")
-    
+    parser.add_argument(
+        "--require-platforms", default="", help="Comma-separated list of required platforms"
+    )
+    parser.add_argument(
+        "--require-python-versions",
+        default="",
+        help="Comma-separated list of required Python versions",
+    )
+    parser.add_argument(
+        "--require-freethreaded", default="none", help="Free-threaded build requirements"
+    )
+    parser.add_argument(
+        "--require-matrix",
+        default="",
+        help="JSON string defining per-platform version requirements",
+    )
+    parser.add_argument(
+        "--fail-on-missing", default="true", help="Whether to fail on missing wheels"
+    )
+    parser.add_argument(
+        "--output-file",
+        default="",
+        help="Optional file to write the summary to (in addition to GITHUB_STEP_SUMMARY)",
+    )
+
     args = parser.parse_args()
     wheels_path = Path(args.wheels_path)
 
@@ -502,6 +529,11 @@ def main() -> None:
     else:
         # For local testing
         print(table)
+
+    # Write to output file if specified (for PR comments)
+    if args.output_file:
+        with open(args.output_file, "w") as f:
+            f.write(table + "\n")
 
     # Exit with error if requirements not met and fail-on-missing is true
     if not requirements_met and args.fail_on_missing.lower() == "true":

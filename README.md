@@ -59,6 +59,46 @@ You can ensure specific wheels are built by adding validation:
 
 This will fail the workflow if any required wheels are missing, with a detailed error message showing what's missing.
 
+### With PR Comments
+
+Post the build summary as a PR comment (requires `pull-requests: write` permission):
+
+```yaml
+name: Build
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write  # Required for posting comments
+
+jobs:
+  # ... your build jobs ...
+  
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [linux, windows, macos]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: all-wheels
+      
+      - name: Generate build summary
+        uses: patrick91/wheels-ci-action@v1
+        with:
+          wheels-path: all-wheels
+          post-comment: "true"
+```
+
+This will:
+- Create a comment on the PR with the build summary table
+- Update the same comment on subsequent pushes (using `--edit-last`)
+- Only work on `pull_request` events (safely ignored on other events)
+
 ### Complete Example
 
 Here's a complete workflow example for a Python package using `maturin`:
@@ -133,6 +173,7 @@ jobs:
 | `require-freethreaded` | Require free-threaded Python builds. Options: `"none"` (default), `"3.14"`, `"3.14+"`, `"all"`. Applied globally in simple mode. | No | `"none"` |
 | `require-matrix` | JSON array defining per-platform version requirements. Each entry has `"platform"` (supports wildcards) and `"versions"` fields. When specified, takes precedence over simple mode settings. | No | `""` (use simple mode) |
 | `fail-on-missing` | Whether to fail the action if required wheels are missing. Set to `"false"` to only warn. | No | `"true"` |
+| `post-comment` | Post the summary as a PR comment. Requires `pull-requests: write` permission. Set to `"true"` to enable. Only works on `pull_request` events. | No | `"false"` |
 
 ## Validation
 

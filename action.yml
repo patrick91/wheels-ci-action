@@ -32,6 +32,11 @@ inputs:
     description: 'Whether to fail the action if required wheels are missing. Set to "false" to only warn.'
     required: false
     default: 'true'
+  
+  post-comment:
+    description: 'Whether to post the summary as a PR comment. Requires pull_request event and write permissions. Options: "true", "false" (default), "always" (post even on non-PR events as an issue comment on the default branch).'
+    required: false
+    default: 'false'
 
 branding:
   icon: 'package'
@@ -49,4 +54,21 @@ runs:
       shell: bash
       env:
         REQUIRE_MATRIX: ${{ inputs.require-matrix }}
-      run: python ${{ github.action_path }}/generate_summary.py "${{ inputs.wheels-path }}" --require-platforms "${{ inputs.require-platforms }}" --require-python-versions "${{ inputs.require-python-versions }}" --require-freethreaded "${{ inputs.require-freethreaded }}" --require-matrix "$REQUIRE_MATRIX" --fail-on-missing "${{ inputs.fail-on-missing }}"
+      run: |
+        python ${{ github.action_path }}/generate_summary.py "${{ inputs.wheels-path }}" --require-platforms "${{ inputs.require-platforms }}" --require-python-versions "${{ inputs.require-python-versions }}" --require-freethreaded "${{ inputs.require-freethreaded }}" --require-matrix "$REQUIRE_MATRIX" --fail-on-missing "${{ inputs.fail-on-missing }}" --output-file "${{ runner.temp }}/wheels-summary.md"
+    
+    - name: Post PR comment
+      if: inputs.post-comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        if [ -f "${{ runner.temp }}/wheels-summary.md" ]; then
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --body-file "${{ runner.temp }}/wheels-summary.md" \
+            --edit-last || \
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --body-file "${{ runner.temp }}/wheels-summary.md"
+        fi
