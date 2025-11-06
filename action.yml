@@ -47,4 +47,6 @@ runs:
 
     - name: Generate summary
       shell: bash
-      run: python ${{ github.action_path }}/generate_summary.py "${{ inputs.wheels-path }}" --require-platforms "${{ inputs.require-platforms }}" --require-python-versions "${{ inputs.require-python-versions }}" --require-freethreaded "${{ inputs.require-freethreaded }}" --require-matrix "${{ inputs.require-matrix }}" --fail-on-missing "${{ inputs.fail-on-missing }}"
+      env:
+        REQUIRE_MATRIX: ${{ inputs.require-matrix }}
+      run: python ${{ github.action_path }}/generate_summary.py "${{ inputs.wheels-path }}" --require-platforms "${{ inputs.require-platforms }}" --require-python-versions "${{ inputs.require-python-versions }}" --require-freethreaded "${{ inputs.require-freethreaded }}" --require-matrix "$REQUIRE_MATRIX" --fail-on-missing "${{ inputs.fail-on-missing }}"
