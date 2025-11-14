@@ -151,11 +151,10 @@ def scan_wheels(wheels_path: Path) -> tuple[dict[str, set[str]], set[str], set[s
         - platforms: Set of all platforms found
         - versions: Set of all Python versions found
     """
-    matrix = defaultdict(set)
-    platforms = set()
-    versions = set()
+    matrix = defaultdict[str, set[str]](set)
+    platforms = set[str]()
+    versions = set[str]()
 
-    # Find all .whl files
     for wheel_file in wheels_path.rglob("*.whl"):
         filename = wheel_file.name
 
@@ -175,7 +174,6 @@ def scan_wheels(wheels_path: Path) -> tuple[dict[str, set[str]], set[str], set[s
 
 def sort_platforms(platforms: set[str]) -> list[str]:
     """Sort platforms in a logical order (OS, then architecture)."""
-    # Define order for OSes
     os_order = {
         "Linux": 0,
         "musllinux": 1,
@@ -196,7 +194,6 @@ def sort_platforms(platforms: set[str]) -> list[str]:
     }
 
     def platform_sort_key(platform: str) -> tuple[int, int, str]:
-        # Split platform into OS and architecture
         parts = platform.split(" ", 1)
         os_name = parts[0]
         arch = parts[1] if len(parts) > 1 else ""
@@ -237,7 +234,7 @@ def sort_versions(versions: set[str]) -> list[str]:
 
 def generate_table(matrix: dict[str, set[str]], platforms: set[str], versions: set[str]) -> str:
     """Generate the markdown table."""
-    lines = []
+    lines = list[str]()
 
     # Header
     lines.append("# Build Summary - All Platforms and Architectures")
@@ -364,7 +361,7 @@ def validate_requirements(
     Returns:
         Tuple of (all_requirements_met, list_of_errors)
     """
-    errors = []
+    errors = list[str]()
 
     # If matrix requirements are specified, use those exclusively
     if require_matrix:
@@ -394,7 +391,7 @@ def validate_requirements(
             required_versions_raw = [
                 v.strip() for v in required_versions_str.split(",") if v.strip()
             ]
-            required_versions = []
+            required_versions = list[str]()
             for version_req in required_versions_raw:
                 required_versions.extend(parse_version_requirement(version_req, versions))
 
@@ -420,7 +417,7 @@ def validate_requirements(
     # Validate required Python versions (globally across all platforms)
     if require_python_versions:
         required_versions_raw = [v.strip() for v in require_python_versions.split(",") if v.strip()]
-        required_versions = []
+        required_versions = list[str]()
         for req in required_versions_raw:
             required_versions.extend(parse_version_requirement(req, versions))
 
