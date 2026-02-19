@@ -111,6 +111,8 @@ class WheelInfo:
             return "ppc64le"
         if "s390x" in platform:
             return "s390x"
+        if "riscv64" in platform:
+            return "riscv64"
         if "i686" in platform or "x86" in platform or "i386" in platform:
             return "x86"
 
