@@ -64,11 +64,15 @@ runs:
         GH_TOKEN: ${{ github.token }}
       run: |
         if [ -f "${{ runner.temp }}/wheels-summary.md" ]; then
-          gh pr comment ${{ github.event.pull_request.number }} \
+          if gh pr comment ${{ github.event.pull_request.number }} \
             --repo ${{ github.repository }} \
             --body-file "${{ runner.temp }}/wheels-summary.md" \
-            --edit-last || \
+            --edit-last 2>/dev/null || \
           gh pr comment ${{ github.event.pull_request.number }} \
             --repo ${{ github.repository }} \
-            --body-file "${{ runner.temp }}/wheels-summary.md"
+            --body-file "${{ runner.temp }}/wheels-summary.md" 2>/dev/null; then
+            echo "Successfully posted PR comment."
+          else
+            echo "::warning::Could not post PR comment. This is expected for fork PRs where GITHUB_TOKEN has read-only permissions. See https://github.com/patrick91/wheels-ci-action#posting-comments-on-fork-prs for a workaround."
+          fi
         fi

@@ -99,6 +99,8 @@ This will:
 - Update the same comment on subsequent pushes (using `--edit-last`)
 - Only work on `pull_request` events (safely ignored on other events)
 
+> **Note**: This approach works for PRs from branches in the same repo. For PRs from forks, the `GITHUB_TOKEN` is always read-only, so the comment step will log a warning and skip. See [Posting Comments on Fork PRs](#posting-comments-on-fork-prs) below for a secure workaround.
+
 ### Complete Example
 
 Here's a complete workflow example for a Python package using `maturin`:
@@ -292,6 +294,19 @@ Set `fail-on-missing: "false"` to only show warnings without failing:
     require-python-versions: "3.10-3.14"
     fail-on-missing: "false"  # Only warn, don't fail
 ```
+
+## Posting Comments on Fork PRs
+
+When a pull request comes from a **fork**, GitHub restricts the `GITHUB_TOKEN` to read-only permissions for security. This means the `post-comment` feature cannot post comments directly on fork PRs.
+
+The secure workaround is to use a separate `workflow_run`-triggered workflow. This runs in the context of the base repository (with write permissions) after your CI workflow completes, so it can safely post comments without exposing write tokens to untrusted fork code.
+
+See [`examples/post-summary-comment.yml`](examples/post-summary-comment.yml) for a ready-to-use workflow template.
+
+**Key points:**
+- Your main CI workflow stays unchanged (builds wheels, uploads artifacts)
+- The `workflow_run` workflow downloads artifacts from the completed run and posts the comment
+- This is the [GitHub-recommended pattern](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#workflow_run) for securely handling fork PRs
 
 ## How It Works
 
